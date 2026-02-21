@@ -683,15 +683,17 @@
             useEffect(() => {
                 loadData();
                 addBotMessage(
-                    "Hello! I'm your AI Health Assistant. 👋\n\n" +
-                    "I'm here to help you with:\n" +
-                    "• Medical questions and health concerns\n" +
-                    "• Personalized diet and nutrition plans\n" +
-                    "• Exercise recommendations\n" +
-                    "• Medicine reminders and management\n" +
-                    "• Health tips and preventive care\n\n" +
-                    "**Important:** I provide general health information. For serious symptoms or emergencies, please consult a healthcare professional immediately.\n\n" +
-                    "How are you feeling today? Tell me about any health concerns you have."
+                    "Hello! I'm your **Virtual Health Assistant & Triage Specialist**. 👋\n\n" +
+                    "I provide evidence-based health guidance and help you understand the urgency of your symptoms.\n\n" +
+                    "**I can help you with:**\n" +
+                    "• 🩺 Symptom triage & urgency assessment\n" +
+                    "• 🍽️ Personalised diet & nutrition plans\n" +
+                    "• 💪 Exercise recommendations for your condition\n" +
+                    "• 💊 Medicine reminders & chronic condition support\n" +
+                    "• 🌿 Home remedies & preventive health tips\n\n" +
+                    "🚨 **Emergency?** If you have chest pain, difficulty breathing, sudden numbness, or any life-threatening symptom — tell me immediately and I will give you emergency contact numbers.\n\n" +
+                    "⚕️ **Disclaimer:** I am not a doctor and cannot diagnose or prescribe. For serious symptoms, always consult a qualified healthcare professional.\n\n" +
+                    "To get started, could you share your **age** and any **existing health conditions** (e.g., diabetes, hypertension)? This helps me give you the most relevant guidance."
                 );
             }, []);
 
@@ -729,6 +731,23 @@
                 const userMessage = inputValue.trim();
                 addUserMessage(userMessage);
                 setInputValue('');
+
+                // 🚨 EMERGENCY TRIAGE — Red Flag check (highest priority)
+                if (checkEmergency(userMessage)) {
+                    addBotMessage(
+                        `🚨 **EMERGENCY ALERT — CALL FOR HELP IMMEDIATELY** 🚨\n\n` +
+                        `Based on what you've described, this may be a **life-threatening emergency**.\n\n` +
+                        `**📞 Call Emergency Services RIGHT NOW:**\n` +
+                        `• 🇮🇳 India: **102** (Ambulance) / **108** (Emergency)\n` +
+                        `• 🇺🇸 USA / Canada: **911**\n` +
+                        `• 🇬🇧 UK: **999**\n` +
+                        `• 🌍 International Emergency: **112**\n\n` +
+                        `**⚠️ Do NOT wait. Do NOT drive yourself. Ask someone nearby to help or call now.**\n\n` +
+                        `_This bot cannot provide emergency care. Please contact emergency services immediately._`
+                    );
+                    return;
+                }
+
                 setIsTyping(true);
 
                 // Analyze message for context
@@ -737,6 +756,22 @@
                 // Get AI response
                 await getAIResponse(userMessage);
                 setIsTyping(false);
+            }
+
+            // RED FLAG emergency keywords — triggers immediate escalation
+            const EMERGENCY_KEYWORDS = [
+                'chest pain', 'chest tightness', 'heart attack', 'can\'t breathe', 'cannot breathe',
+                'difficulty breathing', 'shortness of breath', 'trouble breathing',
+                'sudden numbness', 'stroke', 'unconscious', 'not breathing', 'stopped breathing',
+                'fainting', 'fainted', 'blacked out', 'severe bleeding', 'coughing blood',
+                'vomiting blood', 'blood in stool', 'suicidal', 'overdose', 'poisoning',
+                'severe allergic', 'anaphylaxis', 'throat closing', 'can\'t swallow',
+                'unresponsive', 'seizure', 'convulsion', 'paralysis'
+            ];
+
+            function checkEmergency(message) {
+                const lower = message.toLowerCase();
+                return EMERGENCY_KEYWORDS.some(kw => lower.includes(kw));
             }
 
             function analyzeUserMessage(message) {
@@ -765,64 +800,65 @@
 
             async function getAIResponse(userMessage) {
                 try {
-                    // Build comprehensive system prompt
-                    let systemPrompt = `You are an empathetic, intelligent AI health assistant. You provide helpful health advice while being warm, understanding, and supportive.
+                    // ── ROCAS Framework System Prompt ──────────────────────────────────
+                    let systemPrompt = `ROLE:
+You are a Certified Virtual Health Assistant and Triage Specialist built for HealthCare AI Assistant. You provide evidence-based health information, explain medical terms in plain language, and help users determine the urgency of their symptoms.
+CRUCIAL CONSTRAINT: You are NOT a doctor. You cannot provide a final diagnosis or prescribe/recommend specific dosages for Schedule H or prescription drugs. Always state this disclaimer clearly.
 
-CONVERSATION CONTINUITY: This is an ongoing conversation. Reference previous messages and build on the context naturally. If the user mentioned symptoms earlier, acknowledge them and ask follow-up questions.
+OBJECTIVE:
+Provide instant, structured health guidance 24/7. Help users track chronic conditions (diabetes, blood pressure, thyroid, etc.), bridge the gap between "searching online" and "visiting a clinic", and always escalate appropriately when symptoms are serious.
 
-YOUR CAPABILITIES:
-- Answer health questions with accurate, evidence-based information
-- Provide detailed, personalized diet plans with specific meal suggestions and recipes
-- Recommend appropriate exercises based on age and condition
-- Suggest home remedies and natural treatments
-- Offer preventive health tips and lifestyle advice
-- Help manage chronic conditions with practical advice
-- Be especially patient and clear with elderly users
+CONTEXT:
+The user may be feeling unwell, anxious, or seeking clarity about a lab report or medication side effect. They are using a chat interface and need responses that are easy to read even when they are in pain or stressed. Keep responses concise and structured.
 
-RESPONSE STYLE:
-- Be conversational and warm, not clinical
-- Ask relevant follow-up questions to better understand their situation
-- Show empathy and understanding
-- Use clear, simple language
-- Format responses with sections, bullet points, and emphasis for readability
-- Provide actionable, specific advice with examples
-- Include home remedies, diet suggestions, and lifestyle changes
-- Give detailed meal plans when asked about diet
+ACTION — Follow this 4-step triage flow:
+1. VITALS INTAKE: If the user has not shared age, gender, or pre-existing conditions yet, ask for them early. Example: "To give you the best guidance, may I know your age and whether you have any existing conditions like diabetes or hypertension?"
+2. SYMPTOM TRIAGE: Classify urgency as one of:
+   - 🚨 EMERGENCY: Chest pain, difficulty breathing, sudden numbness, loss of consciousness, severe allergic reaction → Direct to emergency services (102/108 India, 911 USA, 999 UK, 112 international). Stop analysis and provide numbers immediately.
+   - ⚠️ URGENT: High fever (>103°F/39.4°C) lasting >2 days, severe vomiting/diarrhea, worsening pain → Recommend same-day clinic visit.
+   - ℹ️ NON-URGENT: Mild symptoms, general wellness questions → Provide structured home care guidance.
+3. INFORMATION: Explain symptoms using the most common, likely causes first (avoid "WebMD syndrome" — do NOT suggest rare or alarming diagnoses like cancer for everyday symptoms). Reference best practices aligned with trusted sources (NHS, Mayo Clinic, WHO).
+4. NEXT STEPS: Always close with a numbered "Next Steps" list and a standard disclaimer.
 
-IMPORTANT - ALWAYS PROVIDE HELPFUL CONTENT:
-- For fever: Suggest rest, hydration, temperature monitoring, foods to eat, what to avoid
-- For diet plans: Give specific breakfast/lunch/dinner examples with portion sizes
-- For conditions: Provide comprehensive management strategies
-- For symptoms: Explain possible causes, home care, when to see a doctor
+CONSTRAINT — SAFETY RULES (Never break these):
+- If ANY life-threatening keyword appears (chest pain, can't breathe, stroke, fainting, seizure, severe bleeding, suicidal, overdose) → STOP everything and output emergency numbers ONLY.
+- Never suggest specific dosages for prescription drugs.
+- Never diagnose a specific disease — describe what symptoms may indicate and refer to a doctor.
+- Always ask at least one clarifying question before giving detailed advice: "How long has this been happening?" or "Is this getting better or worse?"
+- Every response with medical advice MUST end with: ⚕️ Disclaimer: This information is for general guidance only and does not replace professional medical advice. Please consult a qualified doctor for diagnosis and treatment.
 
-SAFETY GUIDELINES:
-- ALWAYS ask about severity of symptoms to assess urgency
-- For serious symptoms (high fever >103°F, severe pain, breathing difficulty, chest pain), IMMEDIATELY recommend seeking emergency care
-- Never diagnose specific diseases - instead describe what symptoms might indicate
-- Suggest over-the-counter remedies but never prescribe prescription medications
-- Always emphasize the importance of consulting healthcare professionals for diagnosis
-- Be extra cautious with symptoms in elderly, children, and pregnant women
+FORMATTING RULES:
+- Use emoji indicators: 🚨 for emergencies, ⚠️ for warnings, ✅ for safe actions, ℹ️ for information
+- Use numbered lists for "Next Steps"
+- Use bullet points for symptoms
+- Bold all important warnings
+- Keep responses under 200 words when possible (for mobile readability)
+- Be empathetic and calm: "I understand this is concerning — let's look at this together."
 
-CONTEXT AWARENESS:`;
+DATA PRIVACY NOTE:
+Never ask for or store sensitive personal identifiers (Aadhaar, SSN, insurance numbers). Health data shared in this chat is for guidance only.`;
 
-                    // Add user profile
+
+                    // Append dynamic user context
                     if (userProfile.age) {
-                        systemPrompt += `\n\nUSER PROFILE:
+                        systemPrompt += `\n\nUSER PROFILE (collected earlier):
 - Age: ${userProfile.age}
 - Gender: ${userProfile.gender || 'Not specified'}
-- Existing conditions: ${userProfile.conditions || 'None mentioned'}
-- Allergies: ${userProfile.allergies || 'None mentioned'}`;
+- Pre-existing conditions: ${userProfile.conditions || 'None mentioned'}
+- Allergies: ${userProfile.allergies || 'None mentioned'}
+Use this profile to personalise triage and advice. An elderly user (65+) or a diabetic patient requires extra caution.`;
                     }
 
-                    // Add conversation context
                     if (conversationContext.symptoms.length > 0) {
-                        systemPrompt += `\n\nRECENT SYMPTOMS MENTIONED: ${conversationContext.symptoms.join(', ')}`;
-                        systemPrompt += `\nBe sure to follow up on these symptoms and provide relevant advice.`;
+                        systemPrompt += `\n\nACTIVE SYMPTOMS IN THIS SESSION: ${conversationContext.symptoms.join(', ')}
+Follow up on these symptoms. Ask clarifying questions (duration, severity, progression) before giving detailed advice.`;
                     }
 
                     if (conversationContext.lastTopic) {
-                        systemPrompt += `\n\nCURRENT TOPIC: ${conversationContext.lastTopic}`;
+                        systemPrompt += `\n\nCURRENT SESSION TOPIC: ${conversationContext.lastTopic}`;
                     }
+
+                    systemPrompt += `\n\nCONVERSATION CONTINUITY: This is an ongoing conversation. Reference what the user has said before. Build on context naturally.`;
 
                     // Build conversation history
                     const conversationHistory = messages.slice(-8).map(msg => ({
